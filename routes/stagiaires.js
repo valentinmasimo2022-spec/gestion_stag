@@ -1,14 +1,22 @@
 'use strict';
 
 const express = require('express');
-const { sql, getPool } = require('../config/db');
+const { query } = require('../config/db');
 
 const router = express.Router();
 
+// Le statut est calculé automatiquement à partir des dates.
+const STATUT_SQL =
+  "CASE " +
+  "WHEN date_debut IS NOT NULL AND date_debut > CURRENT_DATE THEN 'À venir' " +
+  "WHEN date_fin IS NOT NULL AND date_fin < CURRENT_DATE THEN 'Terminé' " +
+  "ELSE 'En cours' END";
+
 const COLONNES =
   'id, nom, postnom, prenom, sexe, telephone, email, formation, ' +
-  'CONVERT(char(10), date_debut, 23) AS date_debut, ' +
-  'CONVERT(char(10), date_fin, 23) AS date_fin, statut';
+  "to_char(date_debut, 'YYYY-MM-DD') AS date_debut, " +
+  "to_char(date_fin, 'YYYY-MM-DD') AS date_fin, " +
+  STATUT_SQL + ' AS statut';
 
 /* ---------- Validation côté serveur ---------- */
 
@@ -67,18 +75,12 @@ function valider(body) {
   return { erreurs, data };
 }
 
-/** Lie les champs validés comme paramètres SQL typés (aucune concaténation SQL). */
-function lierParametres(request, data) {
-  return request
-    .input('nom', sql.NVarChar(100), data.nom)
-    .input('postnom', sql.NVarChar(100), data.postnom)
-    .input('prenom', sql.NVarChar(100), data.prenom)
-    .input('sexe', sql.NVarChar(10), data.sexe)
-    .input('telephone', sql.NVarChar(20), data.telephone)
-    .input('email', sql.NVarChar(150), data.email)
-    .input('formation', sql.NVarChar(100), data.formation)
-    .input('date_debut', sql.Date, data.date_debut)
-    .input('date_fin', sql.Date, data.date_fin);
+/** Valeurs dans l'ordre des paramètres $1..$9 (aucune concaténation SQL). */
+function valeurs(data) {
+  return [
+    data.nom, data.postnom, data.prenom, data.sexe, data.telephone,
+    data.email, data.formation, data.date_debut, data.date_fin
+  ];
 }
 
 function idValide(valeur) {
@@ -97,12 +99,13 @@ function erreurServeur(res, err, message) {
 // Compteurs par statut (tableau de bord)
 router.get('/stats', async (req, res) => {
   try {
-    const pool = await getPool();
-    const r = await pool.request().query(
-      'SELECT statut, COUNT(*) AS total FROM dbo.Stagiaires GROUP BY statut'
+    const r = await query(
+      `SELECT statut, COUNT(*)::int AS total
+       FROM (SELECT ${STATUT_SQL} AS statut FROM stagiaires) t
+       GROUP BY statut`
     );
     const stats = { total: 0, 'À venir': 0, 'En cours': 0, 'Terminé': 0 };
-    for (const ligne of r.recordset) {
+    for (const ligne of r.rows) {
       stats[ligne.statut] = ligne.total;
       stats.total += ligne.total;
     }
@@ -120,30 +123,27 @@ router.get('/', async (req, res) => {
     const limite = Math.min(100, Math.max(1, parseInt(req.query.limite, 10) || 10));
     const offset = (page - 1) * limite;
 
-    const filtre = q
-      ? `WHERE nom LIKE @motif OR postnom LIKE @motif OR prenom LIKE @motif
-            OR CAST(id AS NVARCHAR(10)) = @exact`
-      : '';
-
-    const pool = await getPool();
-    const requete = pool.request();
+    let filtre = '';
+    const params = [];
     if (q) {
       // Neutralise les jokers LIKE saisis par l'utilisateur
-      const protege = q.replace(/[\\%_[]/g, (c) => '[' + c + ']');
-      requete.input('motif', sql.NVarChar(400), `%${protege}%`);
-      requete.input('exact', sql.NVarChar(10), q.slice(0, 10));
+      const protege = q.replace(/[\\%_]/g, (c) => '\\' + c);
+      params.push(`%${protege}%`, q.slice(0, 10));
+      filtre = 'WHERE nom ILIKE $1 OR postnom ILIKE $1 OR prenom ILIKE $1 OR id::text = $2';
     }
-    requete.input('offset', sql.Int, offset).input('limite', sql.Int, limite);
 
-    const r = await requete.query(`
-      SELECT COUNT(*) AS total FROM dbo.Stagiaires ${filtre};
-      SELECT ${COLONNES} FROM dbo.Stagiaires ${filtre}
-      ORDER BY id DESC OFFSET @offset ROWS FETCH NEXT @limite ROWS ONLY;
-    `);
+    const rTotal = await query(`SELECT COUNT(*)::int AS total FROM stagiaires ${filtre}`, params);
+    const total = rTotal.rows[0].total;
 
-    const total = r.recordsets[0][0].total;
+    const n = params.length;
+    const rDonnees = await query(
+      `SELECT ${COLONNES} FROM stagiaires ${filtre}
+       ORDER BY id DESC LIMIT $${n + 1} OFFSET $${n + 2}`,
+      [...params, limite, offset]
+    );
+
     res.json({
-      donnees: r.recordsets[1],
+      donnees: rDonnees.rows,
       total,
       page,
       limite,
@@ -159,11 +159,9 @@ router.get('/:id', async (req, res) => {
   const id = idValide(req.params.id);
   if (!id) return res.status(400).json({ message: 'Identifiant invalide.' });
   try {
-    const pool = await getPool();
-    const r = await pool.request().input('id', sql.Int, id)
-      .query(`SELECT ${COLONNES} FROM dbo.Stagiaires WHERE id = @id`);
-    if (r.recordset.length === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
-    res.json(r.recordset[0]);
+    const r = await query(`SELECT ${COLONNES} FROM stagiaires WHERE id = $1`, [id]);
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
+    res.json(r.rows[0]);
   } catch (err) {
     erreurServeur(res, err, 'Erreur lors de la lecture du dossier.');
   }
@@ -176,13 +174,13 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'Données invalides.', erreurs });
   }
   try {
-    const pool = await getPool();
-    const r = await lierParametres(pool.request(), data).query(`
-      INSERT INTO dbo.Stagiaires (nom, postnom, prenom, sexe, telephone, email, formation, date_debut, date_fin)
-      OUTPUT INSERTED.id
-      VALUES (@nom, @postnom, @prenom, @sexe, @telephone, @email, @formation, @date_debut, @date_fin)
-    `);
-    res.status(201).json({ message: 'Dossier enregistré.', id: r.recordset[0].id });
+    const r = await query(
+      `INSERT INTO stagiaires (nom, postnom, prenom, sexe, telephone, email, formation, date_debut, date_fin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+      valeurs(data)
+    );
+    res.status(201).json({ message: 'Dossier enregistré.', id: r.rows[0].id });
   } catch (err) {
     erreurServeur(res, err, "Erreur lors de l'enregistrement du dossier.");
   }
@@ -197,15 +195,15 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ message: 'Données invalides.', erreurs });
   }
   try {
-    const pool = await getPool();
-    const r = await lierParametres(pool.request().input('id', sql.Int, id), data).query(`
-      UPDATE dbo.Stagiaires SET
-        nom = @nom, postnom = @postnom, prenom = @prenom, sexe = @sexe,
-        telephone = @telephone, email = @email, formation = @formation,
-        date_debut = @date_debut, date_fin = @date_fin
-      WHERE id = @id
-    `);
-    if (r.rowsAffected[0] === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
+    const r = await query(
+      `UPDATE stagiaires SET
+         nom = $1, postnom = $2, prenom = $3, sexe = $4,
+         telephone = $5, email = $6, formation = $7,
+         date_debut = $8, date_fin = $9
+       WHERE id = $10`,
+      [...valeurs(data), id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
     res.json({ message: 'Dossier modifié.' });
   } catch (err) {
     erreurServeur(res, err, 'Erreur lors de la modification du dossier.');
@@ -217,10 +215,8 @@ router.delete('/:id', async (req, res) => {
   const id = idValide(req.params.id);
   if (!id) return res.status(400).json({ message: 'Identifiant invalide.' });
   try {
-    const pool = await getPool();
-    const r = await pool.request().input('id', sql.Int, id)
-      .query('DELETE FROM dbo.Stagiaires WHERE id = @id');
-    if (r.rowsAffected[0] === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
+    const r = await query('DELETE FROM stagiaires WHERE id = $1', [id]);
+    if (r.rowCount === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
     res.json({ message: 'Dossier supprimé.' });
   } catch (err) {
     erreurServeur(res, err, 'Erreur lors de la suppression du dossier.');

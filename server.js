@@ -1,4 +1,3 @@
-
 'use strict';
 
 require('dotenv').config();
@@ -6,7 +5,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const stagiaires = require('./routes/stagiaires');
-const { getPool, sql } = require('./config/db');
+const { query } = require('./config/db');
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -16,29 +15,24 @@ const PORT = parseInt(process.env.PORT, 10) || 3000;
 // ========================================
 
 app.disable('x-powered-by');
-
 app.use(express.json({ limit: '50kb' }));
 
 // ========================================
 // 2. PAGES DE L'APPLICATION
 // ========================================
 
-// Page d'accueil
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'accueil.html'));
 });
 
-// Page de connexion
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Tableau de bord
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Fichiers statiques : CSS, JavaScript et images
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ========================================
@@ -54,52 +48,42 @@ app.post('/api/login', async (req, res) => {
     !email.trim() ||
     !password
   ) {
-    return res.status(400).json({
-      message: 'Email et mot de passe requis.'
-    });
+    return res.status(400).json({ message: 'Email et mot de passe requis.' });
   }
 
   try {
-    const pool = await getPool();
+    const resultat = await query(
+      `SELECT id, email, mot_de_passe, nom, role, actif
+       FROM utilisateurs
+       WHERE email = $1
+       LIMIT 1`,
+      [email.trim()]
+    );
 
-    const resultat = await pool.request()
-      .input('email', sql.NVarChar(150), email.trim())
-      .query(`
-        SELECT TOP 1 Id, Email, MotDePasse, Nom, Role, Actif
-        FROM dbo.Utilisateurs
-        WHERE Email = @email
-      `);
+    const user = resultat.rows[0];
 
-    const user = resultat.recordset[0];
-
-    if (!user || !user.Actif) {
+    if (!user || !user.actif) {
       return res.status(401).json({
         message: 'Identifiants incorrects ou compte désactivé.'
       });
     }
 
-    if (user.MotDePasse !== password) {
-      return res.status(401).json({
-        message: 'Identifiants incorrects.'
-      });
+    if (user.mot_de_passe !== password) {
+      return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
 
     return res.json({
       message: 'Connexion réussie.',
       user: {
-        id: user.Id,
-        email: user.Email,
-        nom: user.Nom,
-        role: user.Role
+        id: user.id,
+        email: user.email,
+        nom: user.nom,
+        role: user.role
       }
     });
-
   } catch (err) {
     console.error('[ERREUR] Login SQL :', err.message);
-
-    return res.status(500).json({
-      message: 'Erreur de vérification SQL Server.'
-    });
+    return res.status(500).json({ message: 'Erreur de vérification de la base.' });
   }
 });
 
@@ -110,30 +94,16 @@ app.post('/api/login', async (req, res) => {
 app.use('/api/stagiaires', stagiaires);
 
 // ========================================
-// 5. VERIFICATION DE LA CONNEXION SQL
+// 5. VERIFICATION DE LA CONNEXION A LA BASE
 // ========================================
 
 app.get('/api/sante', async (req, res) => {
   try {
-    const pool = await getPool();
-
-    await pool.request().query('SELECT 1 AS ok');
-
-    return res.json({
-      serveur: 'ok',
-      base: 'ok'
-    });
-
+    await query('SELECT 1 AS ok');
+    return res.json({ serveur: 'ok', base: 'ok' });
   } catch (err) {
-    console.error(
-      '[ERREUR] Connexion SQL Server :',
-      err.message
-    );
-
-    return res.status(503).json({
-      serveur: 'ok',
-      base: 'indisponible'
-    });
+    console.error('[ERREUR] Connexion base :', err.message);
+    return res.status(503).json({ serveur: 'ok', base: 'indisponible' });
   }
 });
 
@@ -142,9 +112,7 @@ app.get('/api/sante', async (req, res) => {
 // ========================================
 
 app.use('/api', (req, res) => {
-  return res.status(404).json({
-    message: 'Route introuvable.'
-  });
+  return res.status(404).json({ message: 'Route introuvable.' });
 });
 
 // ========================================
@@ -153,16 +121,10 @@ app.use('/api', (req, res) => {
 
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
-    return res.status(400).json({
-      message: 'Requête mal formée.'
-    });
+    return res.status(400).json({ message: 'Requête mal formée.' });
   }
-
   console.error('[ERREUR]', err.message);
-
-  return res.status(500).json({
-    message: 'Erreur interne du serveur.'
-  });
+  return res.status(500).json({ message: 'Erreur interne du serveur.' });
 });
 
 // ========================================
@@ -170,18 +132,9 @@ app.use((err, req, res, next) => {
 // ========================================
 
 app.listen(PORT, () => {
-  console.log(
-    `Application disponible sur http://localhost:${PORT}`
-  );
+  console.log(`Application disponible sur http://localhost:${PORT}`);
 
-  getPool()
-    .then(() => {
-      console.log('Connexion à SQL Server : OK');
-    })
-    .catch((err) => {
-      console.error(
-        'Connexion à SQL Server : ÉCHEC -',
-        err.message
-      );
-    });
+  query('SELECT 1')
+    .then(() => console.log('Connexion à PostgreSQL : OK'))
+    .catch((err) => console.error('Connexion à PostgreSQL : ÉCHEC -', err.message));
 });
