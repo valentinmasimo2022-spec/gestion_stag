@@ -1,0 +1,20 @@
+{
+  "name": "gestion-stagiaires-web",
+  "version": "1.0.0",
+  "description": "Application web de gestion des stagiaires d'un centre de formation professionnelle",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "mssql": "^10.0.5"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
