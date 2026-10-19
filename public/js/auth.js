@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('password');
   const toggleButton = document.querySelector('.toggle-password');
 
-  if (sessionStorage.getItem('gestionStagiairesAuth') === 'true') {
+  if (sessionStorage.getItem('gestionStagiairesToken')) {
     window.location.replace('/dashboard');
     return;
   }
@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(data.message || 'Échec de connexion.');
       }
 
-      sessionStorage.setItem('gestionStagiairesAuth', 'true');
+      sessionStorage.setItem('gestionStagiairesToken', data.token);
+      sessionStorage.setItem('gestionStagiairesUser', JSON.stringify(data.user));
       emailInput.value = '';
       clearPassword();
       message.textContent = '';

@@ -5,22 +5,35 @@
 
 const API = '/api/stagiaires';
 const LIMITE = 10;
-const AUTH_KEY = 'gestionStagiairesAuth';
+const TOKEN_KEY = 'gestionStagiairesToken';
+const USER_KEY = 'gestionStagiairesUser';
 
 const etat = { page: 1, pages: 1, q: '', idEdition: null, idSuppression: null };
 
-if (sessionStorage.getItem(AUTH_KEY) !== 'true') {
+function utilisateur() {
+  try { return JSON.parse(sessionStorage.getItem(USER_KEY)) || {}; } catch { return {}; }
+}
+const estAdmin = utilisateur().role === 'admin';
+
+function deconnecter() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  window.location.replace('/login');
+}
+
+if (!sessionStorage.getItem(TOKEN_KEY)) {
   window.location.replace('/login');
 }
 
 window.addEventListener('beforeunload', () => {
   if (window.location.pathname === '/dashboard') {
-    sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
   }
 });
 
 window.addEventListener('pageshow', () => {
-  if (sessionStorage.getItem(AUTH_KEY) !== 'true') {
+  if (!sessionStorage.getItem(TOKEN_KEY)) {
     window.location.replace('/login');
   }
 });
@@ -35,12 +48,19 @@ const notification = $('notification');
 
 /* ---------- Utilitaires ---------- */
 
-async function appel(url, options) {
+async function appel(url, options = {}) {
+  const entetes = Object.assign({}, options.headers, {
+    Authorization: 'Bearer ' + sessionStorage.getItem(TOKEN_KEY)
+  });
   let reponse;
   try {
-    reponse = await fetch(url, options);
+    reponse = await fetch(url, Object.assign({}, options, { headers: entetes }));
   } catch {
     throw { message: 'Le serveur est injoignable. Vérifiez qu’il est démarré.' };
+  }
+  if (reponse.status === 401) {
+    deconnecter();
+    throw { message: 'Session expirée, reconnectez-vous.' };
   }
   let donnees = {};
   try { donnees = await reponse.json(); } catch { /* réponse vide */ }
@@ -64,11 +84,15 @@ function formaterDate(iso) {
 }
 
 function classeStatut(statut) {
-  return statut === 'En cours' ? 'encours' : statut === 'Terminé' ? 'termine' : 'avenir';
+  if (statut === 'En cours') return 'encours';
+  if (statut === 'Terminé') return 'termine';
+  if (statut === 'Non défini') return 'nondefini';
+  return 'avenir';
 }
 
 /** Avancement du stage en pourcentage (0 à 100) selon les dates. */
 function avancement(s) {
+  if (s.statut === 'Non défini') return 0;
   if (s.statut === 'Terminé') return 100;
   if (s.statut === 'À venir' || !s.date_debut || !s.date_fin) return s.statut === 'En cours' ? 50 : 0;
   const debut = new Date(s.date_debut + 'T00:00:00').getTime();
@@ -117,21 +141,25 @@ function ligne(s) {
   tr.append(tdStatut);
 
   const tdActions = el('td');
-  const actions = el('div', 'actions-ligne');
-  const nomComplet = [s.nom, s.prenom].join(' ');
+  if (estAdmin) {
+    const actions = el('div', 'actions-ligne');
+    const nomComplet = [s.nom, s.prenom].join(' ');
 
-  const bModifier = el('button', 'bouton bouton-lien', 'Modifier');
-  bModifier.type = 'button';
-  bModifier.setAttribute('aria-label', 'Modifier le dossier de ' + nomComplet);
-  bModifier.addEventListener('click', () => ouvrirFormulaire(s));
+    const bModifier = el('button', 'bouton bouton-lien', 'Modifier');
+    bModifier.type = 'button';
+    bModifier.setAttribute('aria-label', 'Modifier le dossier de ' + nomComplet);
+    bModifier.addEventListener('click', () => ouvrirFormulaire(s));
 
-  const bSupprimer = el('button', 'bouton bouton-lien', 'Supprimer');
-  bSupprimer.type = 'button';
-  bSupprimer.setAttribute('aria-label', 'Supprimer le dossier de ' + nomComplet);
-  bSupprimer.addEventListener('click', () => demanderSuppression(s));
+    const bSupprimer = el('button', 'bouton bouton-lien', 'Supprimer');
+    bSupprimer.type = 'button';
+    bSupprimer.setAttribute('aria-label', 'Supprimer le dossier de ' + nomComplet);
+    bSupprimer.addEventListener('click', () => demanderSuppression(s));
 
-  actions.append(bModifier, bSupprimer);
-  tdActions.append(actions);
+    actions.append(bModifier, bSupprimer);
+    tdActions.append(actions);
+  } else {
+    tdActions.append(el('small', null, 'Lecture seule'));
+  }
   tr.append(tdActions);
   return tr;
 }
@@ -149,7 +177,9 @@ async function chargerListe() {
     if (r.donnees.length === 0) {
       messageVide.textContent = etat.q
         ? `Aucun stagiaire ne correspond à « ${etat.q} ».`
-        : 'Aucun dossier enregistré. Cliquez sur « Ajouter un stagiaire » pour commencer.';
+        : estAdmin
+          ? 'Aucun dossier enregistré. Cliquez sur « Ajouter un stagiaire » pour commencer.'
+          : 'Aucun dossier enregistré.';
     }
     $('info-page').textContent = `Page ${r.page} sur ${r.pages} — ${r.total} dossier${r.total > 1 ? 's' : ''}`;
     $('btn-precedent').disabled = r.page <= 1;
@@ -168,6 +198,8 @@ async function chargerStats() {
     $('st-avenir').textContent = s['À venir'];
     $('st-encours').textContent = s['En cours'];
     $('st-termine').textContent = s['Terminé'];
+    const nd = $('st-nondefini');
+    if (nd) nd.textContent = s['Non défini'];
   } catch { /* le message d'erreur est déjà affiché par la liste */ }
 }
 
@@ -292,11 +324,12 @@ formulaire.addEventListener('submit', async (ev) => {
 });
 
 $('btn-annuler').addEventListener('click', () => dlgFormulaire.close());
-$('btn-ajouter').addEventListener('click', () => ouvrirFormulaire(null));
-$('btn-deconnexion').addEventListener('click', () => {
-  sessionStorage.removeItem(AUTH_KEY);
-  window.location.replace('/login');
-});
+if (estAdmin) {
+  $('btn-ajouter').addEventListener('click', () => ouvrirFormulaire(null));
+} else {
+  $('btn-ajouter').hidden = true;
+}
+$('btn-deconnexion').addEventListener('click', deconnecter);
 
 /* ---------- Suppression avec confirmation ---------- */
 

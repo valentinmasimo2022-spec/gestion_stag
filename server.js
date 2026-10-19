@@ -5,6 +5,31 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const bcrypt = require('bcryptjs');
+
+
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('JWT_SECRET manquant dans les variables d\'environnement.');
+  process.exit(1);
+}
+
+/** Vérifie le jeton. Seul le rôle admin peut ajouter, modifier ou supprimer. */
+function authentifier(req, res, next) {
+  const entete = req.headers.authorization || '';
+  const jeton = entete.startsWith('Bearer ') ? entete.slice(7) : null;
+  if (!jeton) return res.status(401).json({ message: 'Connexion requise.' });
+  try {
+    req.user = jwt.verify(jeton, JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ message: 'Session expirée, reconnectez-vous.' });
+  }
+  if (req.method !== 'GET' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Droits insuffisants.' });
+  }
+  next();
+}
 const stagiaires = require('./routes/stagiaires');
 const { query } = require('./config/db');
 
@@ -74,15 +99,18 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
 
+      const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
     return res.json({
       message: 'Connexion réussie.',
-      user: {
-        id: user.id,
-        email: user.email,
-        nom: user.nom,
-        role: user.role
-      }
+      token,
+      user: { id: user.id, email: user.email, nom: user.nom, role: user.role }
     });
+
   } catch (err) {
     console.error('[ERREUR] Login SQL :', err.message);
     return res.status(500).json({ message: 'Erreur de vérification de la base.' });
@@ -93,7 +121,7 @@ app.post('/api/login', async (req, res) => {
 // 4. GESTION DES STAGIAIRES
 // ========================================
 
-app.use('/api/stagiaires', stagiaires);
+app.use('/api/stagiaires', authentifier, stagiaires);
 
 // ========================================
 // 5. VERIFICATION DE LA CONNEXION A LA BASE
