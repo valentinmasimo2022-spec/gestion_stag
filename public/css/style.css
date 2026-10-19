@@ -781,3 +781,69 @@ dialog h2 {
     scroll-behavior: auto !important;
   }
 }
+/* ============================================================
+   AJOUTS RESPONSIVE
+   ============================================================ */
+
+html { -webkit-text-size-adjust: 100%; }
+img, svg, video { max-width: 100%; height: auto; }
+
+/* Le tableau défile horizontalement, avec un défilement fluide au doigt */
+.tableau-conteneur {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Les boîtes de dialogue ne dépassent jamais l'écran */
+dialog {
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+/* Tablette */
+@media (max-width: 900px) {
+  .entete-main { flex-wrap: wrap; }
+  .hero-copy { padding: 1.5rem; }
+  .auth-illustration { padding: 1.6rem; }
+  .auth-illustration h1 { font-size: 1.8rem; }
+}
+
+/* Téléphone */
+@media (max-width: 720px) {
+  /* 16 px minimum : évite le zoom automatique d'iPhone sur les champs */
+  input, select { font-size: 16px; }
+
+  .accueil-main { padding: 1.5rem 0 1rem; }
+  .hero { padding: 1rem 0; gap: 1.2rem; }
+  .hero-panel { grid-template-columns: 1fr 1fr; }
+
+  .auth-card { padding: 1.6rem 1.2rem; }
+  .auth-card h2 { font-size: 1.6rem; }
+  .page-auth { padding: 1rem 0.6rem; }
+}
+
+@media (max-width: 560px) {
+  /* Garde 2 cartes de statistiques par ligne au lieu d'une pile très longue */
+  .bilan { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+  .bilan-item { padding: 0.8rem; }
+  .bilan-valeur { font-size: 1.6rem; }
+  .bilan-nom { font-size: 0.7rem; }
+
+  /* Les boutons du tableau restent petits (la règle width:100% ne les touche pas) */
+  .actions-ligne .bouton,
+  .bouton-lien { width: auto; }
+
+  .entete-main { flex-direction: column; align-items: flex-start; }
+
+  .auth-illustration p { display: none; }
+
+  .pagination { gap: 0.6rem; }
+  .notification { font-size: 0.9rem; }
+}
+
+@media (max-width: 360px) {
+  .bilan-valeur { font-size: 1.35rem; }
+  .hero-panel { grid-template-columns: 1fr; }
+}
+.badge.nondefini { color: #8a6d3b; background: #fbf1dc; }
+.frise.nondefini > span { background: linear-gradient(90deg, #b8c2cc 0%, #cfd7de 100%); }
