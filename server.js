@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const stagiaires = require('./routes/stagiaires');
 const { query } = require('./config/db');
 
@@ -68,7 +69,8 @@ app.post('/api/login', async (req, res) => {
       });
     }
 
-    if (user.mot_de_passe !== password) {
+      const motDePasseOk = await bcrypt.compare(password, user.mot_de_passe);
+    if (!motDePasseOk) {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
 
