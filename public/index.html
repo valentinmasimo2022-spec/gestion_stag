@@ -1,9 +1,9 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestion des stagiaires</title>
+  <title>Tableau de bord | Gestion des stagiaires</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,10 +11,14 @@
     <div class="conteneur entete-contenu">
       <div class="entete-main">
         <div>
+          <span class="eyebrow">Tableau de bord</span>
           <h1>Gestion des stagiaires</h1>
           <p class="sous-titre">Dossiers et périodes de stage du centre de formation</p>
         </div>
-        <button type="button" class="bouton bouton-danger" id="btn-deconnexion">Déconnexion</button>
+        <div class="entete-compte">
+          <p class="utilisateur-info" id="info-utilisateur"></p>
+          <button type="button" class="bouton bouton-deconnexion" id="btn-deconnexion">Déconnexion</button>
+        </div>
       </div>
     </div>
   </header>
@@ -25,7 +29,10 @@
       <div class="bilan-item"><span class="bilan-valeur" id="st-avenir">–</span><span class="bilan-nom">À venir</span></div>
       <div class="bilan-item"><span class="bilan-valeur" id="st-encours">–</span><span class="bilan-nom">En cours</span></div>
       <div class="bilan-item"><span class="bilan-valeur" id="st-termine">–</span><span class="bilan-nom">Terminés</span></div>
+      <div class="bilan-item"><span class="bilan-valeur" id="st-nondefini">–</span><span class="bilan-nom">Non définis</span></div>
     </section>
+
+    <section class="alertes" id="alertes-fin" aria-live="polite" hidden></section>
 
     <section class="barre-outils">
       <label class="recherche">

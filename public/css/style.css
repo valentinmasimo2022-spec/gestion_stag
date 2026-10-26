@@ -1151,3 +1151,34 @@ dialog::backdrop { background: rgba(27, 42, 58, 0.45); backdrop-filter: none; }
 /* ---- Notification ---- */
 .notification { background: #1b2a3a; box-shadow: none; border-radius: 8px; }
 .notification.erreur-notif { background: #a62f2f; }
+/* ---- Tableau de bord : en-tête, compteurs ---- */
+.entete-compte {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.utilisateur-info {
+  margin: 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: right;
+}
+.utilisateur-info:empty { display: none; }
+.bouton-deconnexion {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.bouton-deconnexion:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+/* 5 compteurs : s'adaptent à la largeur de l'écran */
+.bilan { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+@media (max-width: 560px) {
+  .entete-compte { width: 100%; justify-content: space-between; }
+  .utilisateur-info { text-align: left; }
+  .bouton-deconnexion { width: auto; }
+}

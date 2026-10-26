@@ -404,5 +404,9 @@ $('recherche').addEventListener('input', (ev) => {
 
 $('btn-precedent').addEventListener('click', () => { if (etat.page > 1) { etat.page--; chargerListe(); } });
 $('btn-suivant').addEventListener('click', () => { if (etat.page < etat.pages) { etat.page++; chargerListe(); } });
-
+const compte = utilisateur();
+const infoCompte = $('info-utilisateur');
+if (infoCompte) {
+  infoCompte.textContent = (compte.nom || compte.email || '') + (estAdmin ? ' · Administrateur' : ' · Lecture seule');
+}
 toutRecharger();
