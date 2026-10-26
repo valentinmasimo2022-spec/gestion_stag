@@ -39,6 +39,7 @@
         <span class="visuel-cache">Rechercher un stagiaire</span>
         <input type="search" id="recherche" placeholder="Rechercher par numéro, nom ou prénom" autocomplete="off">
       </label>
+      <button type="button" class="bouton" id="btn-exporter">Exporter (Excel)</button>
       <button type="button" class="bouton bouton-principal" id="btn-ajouter">Ajouter un stagiaire</button>
     </section>
 
@@ -140,6 +141,33 @@
     <div class="actions-dialogue">
       <button type="button" class="bouton" id="btn-garder">Garder le dossier</button>
       <button type="button" class="bouton bouton-danger" id="btn-confirmer-suppression">Supprimer le dossier</button>
+    </div>
+  </dialog>
+
+  <!-- Export Excel -->
+  <dialog id="dlg-export" aria-labelledby="titre-export">
+    <div class="corps-dialogue">
+      <h2 id="titre-export">Exporter un rapport</h2>
+      <div class="grille">
+        <div class="champ champ-large">
+          <label for="exp-formation">Formation</label>
+          <select id="exp-formation"><option value="">Toutes les formations</option></select>
+        </div>
+        <div class="champ champ-large">
+          <label for="exp-statut">Statut</label>
+          <select id="exp-statut">
+            <option value="">Tous les statuts</option>
+            <option>À venir</option>
+            <option>En cours</option>
+            <option>Terminé</option>
+            <option>Non défini</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions-dialogue">
+        <button type="button" class="bouton" id="btn-annuler-export">Annuler</button>
+        <button type="button" class="bouton bouton-principal" id="btn-lancer-export">Télécharger</button>
+      </div>
     </div>
   </dialog>
 

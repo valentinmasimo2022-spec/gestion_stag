@@ -5,7 +5,7 @@
   --panel-strong: #0f2339;
   --line: rgba(143, 177, 214, 0.16);
   --text: #edf6ff;
-  --muted: #a4bad3;
+  --muted: #5c6b7a;
   --primary: #3d8bfd;
   --primary-strong: #2563eb;
   --primary-soft: rgba(61, 139, 253, 0.16);
@@ -1182,3 +1182,24 @@ dialog::backdrop { background: rgba(27, 42, 58, 0.45); backdrop-filter: none; }
   .utilisateur-info { text-align: left; }
   .bouton-deconnexion { width: auto; }
 }
+.corps-dialogue { padding: 0 1.4rem 1.4rem; }
+.corps-dialogue h2 { margin: 0 -1.4rem 1.2rem; }
+.corps-dialogue .actions-dialogue { padding: 0; }
+
+@media (max-width: 560px) {
+  .corps-dialogue { padding: 0 1rem 1rem; }
+  .corps-dialogue h2 { margin: 0 -1rem 1rem; }
+}
+.alertes {
+  margin: 1rem 0;
+  padding: 1rem 1.2rem;
+  background: #fff8e8;
+  border: 1px solid #ecd9a6;
+  border-left: 4px solid #d9a441;
+  border-radius: 10px;
+  color: #5a4310;
+}
+.alertes[hidden] { display: none; }
+.alertes h2 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; }
+.alertes-liste { margin: 0; padding-left: 1.1rem; font-size: 0.93rem; line-height: 1.6; }
+

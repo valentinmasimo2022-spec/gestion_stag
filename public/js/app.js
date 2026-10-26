@@ -43,6 +43,7 @@ const corps = $('corps-tableau');
 const messageVide = $('message-vide');
 const dlgFormulaire = $('dlg-formulaire');
 const dlgSuppression = $('dlg-suppression');
+const dlgExport = $('dlg-export');
 const formulaire = $('formulaire');
 const notification = $('notification');
 
@@ -66,6 +67,27 @@ async function appel(url, options = {}) {
   try { donnees = await reponse.json(); } catch { /* réponse vide */ }
   if (!reponse.ok) throw { message: donnees.message || 'Une erreur est survenue.', erreurs: donnees.erreurs };
   return donnees;
+}
+
+/** Télécharge un fichier renvoyé par le serveur (PDF, Excel). */
+async function telechargerFichier(url, options, nomFichier) {
+  const entetes = Object.assign({}, options && options.headers, {
+    Authorization: 'Bearer ' + sessionStorage.getItem(TOKEN_KEY)
+  });
+  const rep = await fetch(url, Object.assign({}, options, { headers: entetes }));
+  if (rep.status === 401) { deconnecter(); return false; }
+  if (!rep.ok) {
+    const d = await rep.json().catch(() => ({}));
+    notifier(d.message || 'Erreur lors du téléchargement.', true);
+    return false;
+  }
+  const lien = URL.createObjectURL(await rep.blob());
+  const a = document.createElement('a');
+  a.href = lien;
+  a.download = nomFichier;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(lien), 10000);
+  return true;
 }
 
 let minuteurNotif;
@@ -113,24 +135,22 @@ function el(nom, classe, texte) {
 
 async function telechargerAttestation(s) {
   try {
-    const rep = await fetch(`${API}/${s.id}/attestation`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + sessionStorage.getItem(TOKEN_KEY) }
-    });
-    if (rep.status === 401) { deconnecter(); return; }
-    if (!rep.ok) {
-      const d = await rep.json().catch(() => ({}));
-      notifier(d.message || 'Erreur lors de la génération.', true);
-      return;
-    }
-    const url = URL.createObjectURL(await rep.blob());
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attestation-${s.id}.pdf`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const ok = await telechargerFichier(`${API}/${s.id}/attestation`, { method: 'POST' }, `attestation-${s.id}.pdf`);
+    if (ok) await toutRecharger();
   } catch {
     notifier('Le serveur est injoignable.', true);
+  }
+}
+
+async function annulerAttestation(s) {
+  const nom = [s.nom, s.prenom].join(' ');
+  if (!window.confirm(`Annuler l'attestation de ${nom} ? Le QR code ne sera plus valide.`)) return;
+  try {
+    const r = await appel(`${API}/${s.id}/attestation/annuler`, { method: 'POST' });
+    notifier(r.message);
+    await toutRecharger();
+  } catch (e) {
+    notifier(e.message, true);
   }
 }
 
@@ -181,12 +201,23 @@ function ligne(s) {
     bSupprimer.addEventListener('click', () => demanderSuppression(s));
 
     actions.append(bModifier, bSupprimer);
-    if (s.statut === 'Terminé') {
+
+    if (s.statut === 'Terminé' && !s.attestation_annulee) {
       const bAtt = el('button', 'bouton bouton-lien bouton-attestation', 'Attestation');
       bAtt.type = 'button';
       bAtt.setAttribute('aria-label', 'Attestation de stage de ' + nomComplet);
       bAtt.addEventListener('click', () => telechargerAttestation(s));
       actions.append(bAtt);
+    }
+    if (s.attestation_emise && !s.attestation_annulee) {
+      const bAnn = el('button', 'bouton bouton-lien', 'Annuler attest.');
+      bAnn.type = 'button';
+      bAnn.setAttribute('aria-label', "Annuler l'attestation de " + nomComplet);
+      bAnn.addEventListener('click', () => annulerAttestation(s));
+      actions.append(bAnn);
+    }
+    if (s.attestation_annulee) {
+      actions.append(el('small', null, 'Attestation annulée'));
     }
     tdActions.append(actions);
   } else {
@@ -235,7 +266,41 @@ async function chargerStats() {
   } catch { /* le message d'erreur est déjà affiché par la liste */ }
 }
 
-function toutRecharger() { return Promise.all([chargerListe(), chargerStats()]); }
+/* ---------- Alertes de fin de stage ---------- */
+
+function libelleDelai(n) {
+  if (n === 0) return "se termine aujourd'hui";
+  if (n === 1) return 'se termine demain';
+  return `se termine dans ${n} jours`;
+}
+
+async function chargerAlertes() {
+  const panneau = $('alertes-fin');
+  if (!panneau) return;
+  try {
+    const r = await appel(API + '/alertes?jours=7');
+    if (r.donnees.length === 0) { panneau.hidden = true; return; }
+
+    const liste = el('ul', 'alertes-liste');
+    for (const s of r.donnees) {
+      const nom = [s.nom, s.postnom, s.prenom].filter(Boolean).join(' ');
+      const li = el('li');
+      li.append(el('strong', null, nom));
+      li.append(el('span', null, ` : ${libelleDelai(s.jours_restants)} (${formaterDate(s.date_fin)})`));
+      liste.append(li);
+    }
+    const n = r.donnees.length;
+    panneau.replaceChildren(
+      el('h2', null, `${n} stage${n > 1 ? 's' : ''} bientôt terminé${n > 1 ? 's' : ''}`),
+      liste
+    );
+    panneau.hidden = false;
+  } catch { panneau.hidden = true; }
+}
+
+function toutRecharger() {
+  return Promise.all([chargerListe(), chargerStats(), chargerAlertes()]);
+}
 
 /* ---------- Formulaire ---------- */
 
@@ -404,6 +469,46 @@ $('recherche').addEventListener('input', (ev) => {
 
 $('btn-precedent').addEventListener('click', () => { if (etat.page > 1) { etat.page--; chargerListe(); } });
 $('btn-suivant').addEventListener('click', () => { if (etat.page < etat.pages) { etat.page++; chargerListe(); } });
+
+/* ---------- Export Excel ---------- */
+
+async function ouvrirExport() {
+  try {
+    const formations = await appel(API + '/formations');
+    const sel = $('exp-formation');
+    sel.replaceChildren(new Option('Toutes les formations', ''));
+    formations.forEach((f) => sel.append(new Option(f, f)));
+  } catch { /* la liste reste limitée à « Toutes » */ }
+  dlgExport.showModal();
+}
+
+async function lancerExport() {
+  const params = new URLSearchParams();
+  if ($('exp-formation').value) params.set('formation', $('exp-formation').value);
+  if ($('exp-statut').value) params.set('statut', $('exp-statut').value);
+
+  const bouton = $('btn-lancer-export');
+  bouton.disabled = true;
+  try {
+    const nom = `rapport-stagiaires-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const ok = await telechargerFichier(`${API}/export?${params}`, { method: 'GET' }, nom);
+    if (ok) {
+      dlgExport.close();
+      notifier('Rapport téléchargé.');
+    }
+  } catch {
+    notifier('Le serveur est injoignable.', true);
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+$('btn-exporter').addEventListener('click', ouvrirExport);
+$('btn-annuler-export').addEventListener('click', () => dlgExport.close());
+$('btn-lancer-export').addEventListener('click', lancerExport);
+
+/* ---------- Démarrage ---------- */
+
 const compte = utilisateur();
 const infoCompte = $('info-utilisateur');
 if (infoCompte) {

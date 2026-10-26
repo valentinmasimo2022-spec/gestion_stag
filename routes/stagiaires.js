@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
+const ExcelJS = require('exceljs');
 const { query } = require('../config/db');
 
 const router = express.Router();
@@ -23,7 +24,8 @@ const COLONNES =
   'id, nom, postnom, prenom, sexe, telephone, email, formation, ' +
   "to_char(date_debut, 'YYYY-MM-DD') AS date_debut, " +
   "to_char(date_fin, 'YYYY-MM-DD') AS date_fin, " +
-  STATUT_SQL + ' AS statut';
+  STATUT_SQL + ' AS statut, ' +
+  '(code_verification IS NOT NULL) AS attestation_emise, attestation_annulee';
 
 /* ---------- Validation côté serveur ---------- */
 
@@ -114,6 +116,8 @@ function erreurServeur(res, err, message) {
 }
 
 /* ---------- Routes ---------- */
+/* Important : les routes fixes (/stats, /alertes, /formations, /export)
+   doivent rester AVANT les routes avec /:id. */
 
 // Compteurs par statut (tableau de bord)
 router.get('/stats', async (req, res) => {
@@ -131,6 +135,138 @@ router.get('/stats', async (req, res) => {
     res.json(stats);
   } catch (err) {
     erreurServeur(res, err, 'Erreur lors du calcul des statistiques.');
+  }
+});
+
+// Stages qui se terminent bientôt : GET /api/stagiaires/alertes?jours=7
+router.get('/alertes', async (req, res) => {
+  try {
+    const jours = Math.min(60, Math.max(1, parseInt(req.query.jours, 10) || 7));
+    const r = await query(
+      `SELECT id, nom, postnom, prenom, formation,
+              to_char(date_fin, 'YYYY-MM-DD') AS date_fin,
+              (date_fin - CURRENT_DATE)::int AS jours_restants
+       FROM stagiaires
+       WHERE date_debut IS NOT NULL
+         AND date_debut <= CURRENT_DATE
+         AND date_fin IS NOT NULL
+         AND date_fin BETWEEN CURRENT_DATE AND CURRENT_DATE + $1::int
+       ORDER BY date_fin, id`,
+      [jours]
+    );
+    res.json({ jours, donnees: r.rows });
+  } catch (err) {
+    erreurServeur(res, err, 'Erreur lors de la lecture des alertes.');
+  }
+});
+
+// Liste des formations (pour le filtre d'export)
+router.get('/formations', async (req, res) => {
+  try {
+    const r = await query(
+      `SELECT DISTINCT formation FROM stagiaires
+       WHERE formation IS NOT NULL ORDER BY formation`
+    );
+    res.json(r.rows.map((l) => l.formation));
+  } catch (err) {
+    erreurServeur(res, err, 'Erreur lors de la lecture des formations.');
+  }
+});
+
+// Rapport Excel : GET /api/stagiaires/export?formation=...&statut=...
+router.get('/export', async (req, res) => {
+  try {
+    const formation = texte(req.query.formation);
+    const statut = texte(req.query.statut);
+    const STATUTS = ['À venir', 'En cours', 'Terminé', 'Non défini'];
+    if (statut && !STATUTS.includes(statut)) {
+      return res.status(400).json({ message: 'Statut invalide.' });
+    }
+
+    const r = await query(
+      `SELECT * FROM (SELECT ${COLONNES} FROM stagiaires) t
+       WHERE ($1::text IS NULL OR formation = $1)
+         AND ($2::text IS NULL OR statut = $2)
+       ORDER BY nom, prenom
+       LIMIT 5000`,
+      [formation, statut]
+    );
+    const lignes = r.rows;
+
+    const compter = (cle) => {
+      const m = new Map();
+      for (const l of lignes) {
+        const k = l[cle] || 'Non précisé';
+        m.set(k, (m.get(k) || 0) + 1);
+      }
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    };
+
+    const classeur = new ExcelJS.Workbook();
+    classeur.creator = NOM_CENTRE;
+    classeur.created = new Date();
+
+    const marine = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3A5F' } };
+    const styleEntete = (ligne) => {
+      ligne.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ligne.fill = marine;
+      ligne.alignment = { vertical: 'middle' };
+    };
+
+    /* Feuille 1 : la liste */
+    const f1 = classeur.addWorksheet('Stagiaires', { views: [{ state: 'frozen', ySplit: 1 }] });
+    f1.columns = [
+      { header: 'N°', key: 'id', width: 7 },
+      { header: 'Nom', key: 'nom', width: 20 },
+      { header: 'Postnom', key: 'postnom', width: 20 },
+      { header: 'Prénom', key: 'prenom', width: 20 },
+      { header: 'Sexe', key: 'sexe', width: 7 },
+      { header: 'Téléphone', key: 'telephone', width: 16 },
+      { header: 'E-mail', key: 'email', width: 28 },
+      { header: 'Formation', key: 'formation', width: 26 },
+      { header: 'Début', key: 'debut', width: 13 },
+      { header: 'Fin', key: 'fin', width: 13 },
+      { header: 'Statut', key: 'statut', width: 13 }
+    ];
+    styleEntete(f1.getRow(1));
+    for (const l of lignes) {
+      f1.addRow({
+        id: l.id, nom: l.nom, postnom: l.postnom, prenom: l.prenom, sexe: l.sexe,
+        telephone: l.telephone, email: l.email, formation: l.formation,
+        debut: l.date_debut ? dateFr(l.date_debut) : '',
+        fin: l.date_fin ? dateFr(l.date_fin) : '',
+        statut: l.statut
+      });
+    }
+    f1.autoFilter = { from: 'A1', to: 'K1' };
+
+    /* Feuille 2 : les statistiques */
+    const f2 = classeur.addWorksheet('Statistiques');
+    f2.columns = [{ width: 34 }, { width: 14 }];
+    f2.addRow([`Rapport : ${NOM_CENTRE}`]).font = { bold: true, size: 14 };
+    f2.addRow([`Édité le ${new Date().toLocaleDateString('fr-FR')}`]);
+    f2.addRow([`Formation : ${formation || 'Toutes'}`]);
+    f2.addRow([`Statut : ${statut || 'Tous'}`]);
+    f2.addRow([]);
+    f2.addRow(['Total des dossiers', lignes.length]).font = { bold: true };
+
+    const bloc = (titre, donnees) => {
+      f2.addRow([]);
+      styleEntete(f2.addRow([titre, 'Nombre']));
+      for (const [k, n] of donnees) f2.addRow([k, n]);
+    };
+    bloc('Par statut', compter('statut'));
+    bloc('Par formation', compter('formation'));
+    bloc('Par sexe', compter('sexe').map(([k, n]) => [k === 'M' ? 'Masculin' : k === 'F' ? 'Féminin' : k, n]));
+
+    const jour = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="rapport-stagiaires-${jour}.xlsx"`);
+    await classeur.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    if (!res.headersSent) erreurServeur(res, err, "Erreur lors de l'export.");
+    else console.error('[ERREUR] Export :', err.message);
   }
 });
 
@@ -211,7 +347,7 @@ router.post('/:id/attestation', async (req, res) => {
   if (!id) return res.status(400).json({ message: 'Identifiant invalide.' });
   try {
     const r = await query(
-      `SELECT ${COLONNES}, code_verification, attestation_annulee,
+      `SELECT ${COLONNES}, code_verification,
               to_char(date_attestation, 'DD/MM/YYYY') AS date_emission
        FROM stagiaires WHERE id = $1`,
       [id]
@@ -293,6 +429,25 @@ router.post('/:id/attestation', async (req, res) => {
   } catch (err) {
     if (!res.headersSent) erreurServeur(res, err, "Erreur lors de la génération de l'attestation.");
     else console.error('[ERREUR] PDF :', err.message);
+  }
+});
+
+// Annulation d'une attestation (admin : le middleware bloque déjà les autres rôles)
+router.post('/:id/attestation/annuler', async (req, res) => {
+  const id = idValide(req.params.id);
+  if (!id) return res.status(400).json({ message: 'Identifiant invalide.' });
+  try {
+    const r = await query(
+      `UPDATE stagiaires SET attestation_annulee = TRUE
+       WHERE id = $1 AND code_verification IS NOT NULL`,
+      [id]
+    );
+    if (r.rowCount === 0) {
+      return res.status(404).json({ message: 'Aucune attestation émise pour ce dossier.' });
+    }
+    res.json({ message: 'Attestation annulée.' });
+  } catch (err) {
+    erreurServeur(res, err, "Erreur lors de l'annulation de l'attestation.");
   }
 });
 
