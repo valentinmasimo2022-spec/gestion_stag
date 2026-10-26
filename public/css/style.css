@@ -1011,3 +1011,143 @@ body.page-accueil .etapes p { margin: 0; font-size: 0.93rem; color: #52606f; lin
 @media (max-width: 560px) {
   body.page-accueil .verification { padding: 1.3rem; }
 }
+/* ============================================================
+   STYLE SOBRE COMMUN : connexion + tableau de bord
+   Couleur d'accent : #1f3a5f | bordures : #dde3ea | fond : #f4f6f8
+   ============================================================ */
+
+/* ---- Fond des pages ---- */
+body { background: #f4f6f8; color: #1b2a3a; }
+body.page-auth { background: #f4f6f8; }
+
+/* ---- En-tête et pied de page : aplat uni ---- */
+.entete { background: #1f3a5f; box-shadow: none; }
+.entete h1 { font-weight: 700; letter-spacing: -0.01em; }
+footer { background: #1f3a5f; }
+footer p { color: rgba(255, 255, 255, 0.8); letter-spacing: 0; }
+
+/* ---- Boutons : plein marine / contour blanc ---- */
+.bouton {
+  background: #fff;
+  color: #1f3a5f;
+  border: 1px solid #c9d3de;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: none;
+}
+.bouton:hover:not(:disabled) {
+  background: #eef2f6;
+  transform: none;
+  box-shadow: none;
+}
+.bouton-principal {
+  background: #1f3a5f;
+  color: #fff;
+  border-color: #1f3a5f;
+}
+.bouton-principal:hover:not(:disabled) { background: #162b47; transform: none; box-shadow: none; }
+.bouton-danger {
+  background: #a62f2f;
+  color: #fff;
+  border-color: #a62f2f;
+}
+.bouton-danger:hover:not(:disabled) { background: #8a2626; transform: none; box-shadow: none; }
+
+/* ---- Champs de saisie ---- */
+input, select {
+  background: #fff;
+  border: 1px solid #c9d3de;
+  border-radius: 8px;
+  color: #1b2a3a;
+}
+input:hover, select:hover { border-color: #8aa0b8; }
+input:focus-visible, select:focus-visible, .bouton:focus-visible {
+  outline: 3px solid rgba(31, 58, 95, 0.18);
+  outline-offset: 1px;
+}
+
+/* ---- CONNEXION ---- */
+.auth-shell {
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.auth-illustration {
+  background: #1f3a5f;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.auth-illustration h1 { font-size: clamp(1.7rem, 2.6vw, 2.4rem); font-weight: 700; letter-spacing: -0.01em; }
+.auth-card {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.auth-card h2 { color: #1b2a3a; font-size: 1.6rem; font-weight: 700; }
+.champ-auth label { color: #1b2a3a; font-weight: 600; }
+.auth-message { color: #1f6b3a; }
+.auth-message.error { color: #b93b3b; }
+
+/* ---- TABLEAU DE BORD : cartes de statistiques ---- */
+.bilan-item {
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-top: 3px solid #1f3a5f;
+  border-radius: 10px;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.bilan-valeur { color: #1f3a5f; font-weight: 700; }
+.bilan-nom { color: #52606f; }
+
+/* ---- Barre d'outils ---- */
+.barre-outils {
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+/* ---- Tableau ---- */
+.tableau-conteneur {
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.tableau thead th {
+  background: #1f3a5f;
+  color: #fff;
+  font-weight: 600;
+  border-bottom: 0;
+}
+.tableau td { border-top: 1px solid #e8edf2; color: #1b2a3a; }
+.tableau tbody tr:hover { background: #f4f6f8; }
+.frise { background: #e8edf2; }
+.frise > span { background: #2f8f5b; }
+.frise.avenir > span { background: #d9a441; }
+.frise.termine > span { background: #7f8d96; }
+
+/* ---- Pagination ---- */
+.pagination { color: #52606f; font-weight: 600; }
+
+/* ---- Fenêtres (ajout, suppression) ---- */
+dialog {
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(27, 42, 58, 0.18);
+}
+dialog h2 {
+  background: #1f3a5f;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+dialog::backdrop { background: rgba(27, 42, 58, 0.45); backdrop-filter: none; }
+.champ label { color: #1b2a3a; font-weight: 600; }
+.erreur-globale { background: #fdecec; border-color: #f0c4c4; }
+
+/* ---- Notification ---- */
+.notification { background: #1b2a3a; box-shadow: none; border-radius: 8px; }
+.notification.erreur-notif { background: #a62f2f; }
