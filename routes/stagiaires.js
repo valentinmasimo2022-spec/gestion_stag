@@ -1,14 +1,21 @@
 'use strict';
 
+const crypto = require('crypto');
 const express = require('express');
+const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
 const { query } = require('../config/db');
 
 const router = express.Router();
 
+const NOM_CENTRE = process.env.NOM_CENTRE || 'Centre de formation professionnelle';
+
 // Le statut est calculé automatiquement à partir des dates.
+// Pas de date de début = pas de stage.
 const STATUT_SQL =
   "CASE " +
-  "WHEN date_debut IS NOT NULL AND date_debut > CURRENT_DATE THEN 'À venir' " +
+  "WHEN date_debut IS NULL THEN 'Non défini' " +
+  "WHEN date_debut > CURRENT_DATE THEN 'À venir' " +
   "WHEN date_fin IS NOT NULL AND date_fin < CURRENT_DATE THEN 'Terminé' " +
   "ELSE 'En cours' END";
 
@@ -34,6 +41,18 @@ function dateValide(s) {
   if (!RE_DATE.test(s)) return false;
   const d = new Date(s + 'T00:00:00Z');
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+function dateFr(iso) {
+  if (!iso) return '?';
+  const [a, m, j] = iso.split('-');
+  return `${j}/${m}/${a}`;
+}
+
+/** Code de vérification aléatoire, impossible à deviner (ex. 3F9A1-C07BD). */
+function genererCode() {
+  const h = crypto.randomBytes(5).toString('hex').toUpperCase();
+  return h.slice(0, 5) + '-' + h.slice(5);
 }
 
 /** Nettoie et valide le corps d'une requête. Retourne { erreurs, data }. */
@@ -104,7 +123,7 @@ router.get('/stats', async (req, res) => {
        FROM (SELECT ${STATUT_SQL} AS statut FROM stagiaires) t
        GROUP BY statut`
     );
-    const stats = { total: 0, 'À venir': 0, 'En cours': 0, 'Terminé': 0 };
+    const stats = { total: 0, 'À venir': 0, 'En cours': 0, 'Terminé': 0, 'Non défini': 0 };
     for (const ligne of r.rows) {
       stats[ligne.statut] = ligne.total;
       stats.total += ligne.total;
@@ -183,6 +202,97 @@ router.post('/', async (req, res) => {
     res.status(201).json({ message: 'Dossier enregistré.', id: r.rows[0].id });
   } catch (err) {
     erreurServeur(res, err, "Erreur lors de l'enregistrement du dossier.");
+  }
+});
+
+// Attestation de stage en PDF avec QR code (admin : le middleware bloque les autres rôles)
+router.post('/:id/attestation', async (req, res) => {
+  const id = idValide(req.params.id);
+  if (!id) return res.status(400).json({ message: 'Identifiant invalide.' });
+  try {
+    const r = await query(
+      `SELECT ${COLONNES}, code_verification, attestation_annulee,
+              to_char(date_attestation, 'DD/MM/YYYY') AS date_emission
+       FROM stagiaires WHERE id = $1`,
+      [id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Dossier introuvable.' });
+    const s = r.rows[0];
+
+    if (s.statut !== 'Terminé') {
+      return res.status(400).json({ message: 'Seuls les stages terminés peuvent recevoir une attestation.' });
+    }
+    if (s.attestation_annulee) {
+      return res.status(400).json({ message: 'Cette attestation a été annulée.' });
+    }
+
+    let code = s.code_verification;
+    let emise = s.date_emission;
+
+    for (let i = 0; i < 5 && !code; i++) {
+      try {
+        const u = await query(
+          `UPDATE stagiaires SET code_verification = $1, date_attestation = NOW()
+           WHERE id = $2 AND code_verification IS NULL
+           RETURNING code_verification, to_char(date_attestation, 'DD/MM/YYYY') AS date_emission`,
+          [genererCode(), id]
+        );
+        if (u.rows.length) {
+          code = u.rows[0].code_verification;
+          emise = u.rows[0].date_emission;
+        } else {
+          // Une autre requête a créé le code entre-temps : on le relit.
+          const l = await query(
+            `SELECT code_verification, to_char(date_attestation, 'DD/MM/YYYY') AS date_emission
+             FROM stagiaires WHERE id = $1`,
+            [id]
+          );
+          code = l.rows[0].code_verification;
+          emise = l.rows[0].date_emission;
+        }
+      } catch (e) {
+        if (e.code !== '23505') throw e; // code déjà pris par un autre dossier : on réessaie
+      }
+    }
+    if (!code) return res.status(500).json({ message: "Impossible de générer l'attestation." });
+
+    const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+    const lien = `${base}/verifier/${code}`;
+    const qr = await QRCode.toBuffer(lien, { width: 220, margin: 1 });
+    const nom = [s.nom, s.postnom, s.prenom].filter(Boolean).join(' ');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="attestation-${id}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    doc.pipe(res);
+
+    doc.rect(30, 30, 535, 782).lineWidth(1).stroke('#1f3a5f');
+
+    doc.fillColor('#1f3a5f').fontSize(18)
+      .text(NOM_CENTRE.toUpperCase(), 60, 90, { align: 'center', width: 475 });
+
+    doc.fontSize(28)
+      .text('ATTESTATION DE STAGE', 60, 180, { align: 'center', width: 475 });
+
+    doc.fillColor('#1b2a3a').fontSize(13)
+      .text(
+        `Le centre atteste que ${nom} a suivi la formation « ${s.formation || 'non précisée'} » ` +
+        `du ${dateFr(s.date_debut)} au ${dateFr(s.date_fin)}.`,
+        60, 290, { align: 'justify', width: 475, lineGap: 8 }
+      );
+
+    doc.text(`Fait le ${emise}.`, 60, 430, { align: 'right', width: 475 });
+
+    doc.image(qr, 60, 640, { width: 110 });
+    doc.fontSize(9).fillColor('#52606f')
+      .text('Scannez le QR code pour vérifier l’authenticité de cette attestation.', 185, 660, { width: 340 })
+      .text(`Code : ${code}`, 185, 690, { width: 340 });
+
+    doc.end();
+  } catch (err) {
+    if (!res.headersSent) erreurServeur(res, err, "Erreur lors de la génération de l'attestation.");
+    else console.error('[ERREUR] PDF :', err.message);
   }
 });
 

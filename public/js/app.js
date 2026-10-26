@@ -109,6 +109,31 @@ function el(nom, classe, texte) {
   return e;
 }
 
+/* ---------- Attestation de stage (PDF avec QR code) ---------- */
+
+async function telechargerAttestation(s) {
+  try {
+    const rep = await fetch(`${API}/${s.id}/attestation`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + sessionStorage.getItem(TOKEN_KEY) }
+    });
+    if (rep.status === 401) { deconnecter(); return; }
+    if (!rep.ok) {
+      const d = await rep.json().catch(() => ({}));
+      notifier(d.message || 'Erreur lors de la génération.', true);
+      return;
+    }
+    const url = URL.createObjectURL(await rep.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attestation-${s.id}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch {
+    notifier('Le serveur est injoignable.', true);
+  }
+}
+
 /* ---------- Affichage de la liste ---------- */
 
 function ligne(s) {
@@ -156,6 +181,13 @@ function ligne(s) {
     bSupprimer.addEventListener('click', () => demanderSuppression(s));
 
     actions.append(bModifier, bSupprimer);
+    if (s.statut === 'Terminé') {
+      const bAtt = el('button', 'bouton bouton-lien bouton-attestation', 'Attestation');
+      bAtt.type = 'button';
+      bAtt.setAttribute('aria-label', 'Attestation de stage de ' + nomComplet);
+      bAtt.addEventListener('click', () => telechargerAttestation(s));
+      actions.append(bAtt);
+    }
     tdActions.append(actions);
   } else {
     tdActions.append(el('small', null, 'Lecture seule'));

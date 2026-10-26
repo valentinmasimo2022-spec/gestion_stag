@@ -5,13 +5,13 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const bcrypt = require('bcryptjs');
-
-
 const jwt = require('jsonwebtoken');
+const stagiaires = require('./routes/stagiaires');
+const { query } = require('./config/db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  console.error('JWT_SECRET manquant dans les variables d\'environnement.');
+  console.error("JWT_SECRET manquant dans les variables d'environnement.");
   process.exit(1);
 }
 
@@ -30,8 +30,6 @@ function authentifier(req, res, next) {
   }
   next();
 }
-const stagiaires = require('./routes/stagiaires');
-const { query } = require('./config/db');
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -40,6 +38,7 @@ const PORT = parseInt(process.env.PORT, 10) || 3000;
 // 1. CONFIGURATION GENERALE
 // ========================================
 
+app.set('trust proxy', 1); // Render : bon protocole https dans le QR code
 app.disable('x-powered-by');
 app.use(express.json({ limit: '50kb' }));
 
@@ -59,6 +58,69 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ========================================
+// 2 bis. VERIFICATION PUBLIQUE D'UNE ATTESTATION
+// (n'affiche que le nom, la formation et les dates)
+// ========================================
+
+function echapper(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function pageVerification(titre, couleur, lignes) {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vérification d'attestation</title>
+<style>
+body{font-family:"Segoe UI",Arial,sans-serif;background:#f4f6f8;margin:0;padding:1.5rem;color:#1b2a3a}
+.carte{max-width:520px;margin:2rem auto;background:#fff;border:1px solid #dde3ea;border-top:4px solid ${couleur};border-radius:10px;padding:1.6rem}
+h1{font-size:1.3rem;margin:0 0 1rem;color:${couleur}}
+p{margin:.4rem 0;line-height:1.5}
+</style></head>
+<body><div class="carte"><h1>${titre}</h1>${lignes}</div></body></html>`;
+}
+
+app.get('/verifier/:code', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const code = String(req.params.code || '').toUpperCase();
+  const introuvable = pageVerification(
+    'Attestation introuvable', '#b93b3b',
+    '<p>Ce code ne correspond à aucune attestation valide.</p>'
+  );
+
+  if (!/^[A-F0-9]{5}-[A-F0-9]{5}$/.test(code)) return res.status(404).send(introuvable);
+
+  try {
+    const r = await query(
+      `SELECT nom, postnom, prenom, formation,
+              to_char(date_debut, 'DD/MM/YYYY') AS debut,
+              to_char(date_fin, 'DD/MM/YYYY') AS fin,
+              to_char(date_attestation, 'DD/MM/YYYY') AS emise
+       FROM stagiaires
+       WHERE code_verification = $1 AND attestation_annulee = FALSE`,
+      [code]
+    );
+    if (!r.rows.length) return res.status(404).send(introuvable);
+
+    const s = r.rows[0];
+    const nom = [s.nom, s.postnom, s.prenom].filter(Boolean).join(' ');
+    return res.send(pageVerification(
+      'Attestation authentique', '#1f6b3a',
+      `<p><strong>${echapper(nom)}</strong></p>
+       <p>Formation : ${echapper(s.formation || 'non précisée')}</p>
+       <p>Période : du ${echapper(s.debut)} au ${echapper(s.fin)}</p>
+       <p>Émise le ${echapper(s.emise)}</p>`
+    ));
+  } catch (err) {
+    console.error('[ERREUR] Vérification :', err.message);
+    return res.status(500).send(pageVerification(
+      'Erreur', '#b93b3b', '<p>Vérification impossible pour le moment.</p>'
+    ));
+  }
+});
+
+// Fichiers statiques : CSS, JavaScript et images
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ========================================
@@ -94,12 +156,12 @@ app.post('/api/login', async (req, res) => {
       });
     }
 
-      const motDePasseOk = await bcrypt.compare(password, user.mot_de_passe);
+    const motDePasseOk = await bcrypt.compare(password, user.mot_de_passe);
     if (!motDePasseOk) {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
 
-      const token = jwt.sign(
+    const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '8h' }
@@ -110,7 +172,6 @@ app.post('/api/login', async (req, res) => {
       token,
       user: { id: user.id, email: user.email, nom: user.nom, role: user.role }
     });
-
   } catch (err) {
     console.error('[ERREUR] Login SQL :', err.message);
     return res.status(500).json({ message: 'Erreur de vérification de la base.' });
@@ -118,7 +179,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ========================================
-// 4. GESTION DES STAGIAIRES
+// 4. GESTION DES STAGIAIRES (protégée)
 // ========================================
 
 app.use('/api/stagiaires', authentifier, stagiaires);

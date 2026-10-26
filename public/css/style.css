@@ -847,3 +847,167 @@ dialog {
 }
 .badge.nondefini { color: #8a6d3b; background: #fbf1dc; }
 .frise.nondefini > span { background: linear-gradient(90deg, #b8c2cc 0%, #cfd7de 100%); }
+/* ============================================================
+   SOBRE ET PROFESSIONNEL : accueil + lisibilité du tableau
+   ============================================================ */
+
+/* ---- Lisibilité (fond blanc) ---- */
+.badge.avenir   { color: #7a5200; background: #fdf0d2; }
+.badge.encours  { color: #0f6b46; background: #dff5ea; }
+.badge.termine  { color: #46545d; background: #edf1f4; }
+.badge.nondefini{ color: #6b5a3a; background: #f3ece0; }
+.erreur         { color: #b93b3b; }
+.erreur-globale { color: #b93b3b; }
+.periode-dates, .identite small, .num { color: #5c6b7a; }
+
+/* ---- Boutons du tableau : sobres ---- */
+.actions-ligne .bouton-lien {
+  background: #fff;
+  color: #1f3a5f;
+  border: 1px solid #c9d3de;
+  box-shadow: none;
+}
+.actions-ligne .bouton-lien:hover:not(:disabled) {
+  background: #eef2f6;
+  transform: none;
+  box-shadow: none;
+}
+.actions-ligne .bouton-attestation {
+  background: #1f3a5f;
+  color: #fff;
+  border-color: #1f3a5f;
+}
+.actions-ligne .bouton-attestation:hover:not(:disabled) { background: #162b47; }
+
+/* ---- Accueil ---- */
+body.page-accueil {
+  --ink: #1b2a3a;
+  --ink-soft: #52606f;
+  --line-soft: #dde3ea;
+  --accent: #1f3a5f;
+  --accent-hover: #162b47;
+  background: #f4f6f8;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+body.page-accueil .entete,
+body.page-accueil .entete-accueil {
+  background: var(--accent);
+  box-shadow: none;
+  padding: 1.6rem 0;
+}
+body.page-accueil .entete h1 { font-size: clamp(1.5rem, 2vw, 2rem); font-weight: 700; letter-spacing: -0.01em; }
+body.page-accueil .eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; opacity: 0.75; }
+
+body.page-accueil .accueil-main { padding: 2.5rem 0 1.5rem; }
+body.page-accueil .hero { gap: 1.5rem; padding: 1rem 0 1.5rem; }
+
+body.page-accueil .hero-copy,
+body.page-accueil .hero-panel,
+body.page-accueil .avantage {
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  box-shadow: none;
+}
+body.page-accueil .hero-copy { padding: 2.2rem; }
+
+body.page-accueil .tag {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+}
+body.page-accueil .hero-copy h2 {
+  color: var(--ink);
+  font-size: clamp(1.8rem, 2.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+body.page-accueil .hero-copy p { color: var(--ink-soft); max-width: 60ch; }
+
+body.page-accueil .bouton {
+  border-radius: 8px;
+  padding: 0.75rem 1.4rem;
+  font-weight: 600;
+  box-shadow: none;
+  text-decoration: none;
+}
+body.page-accueil .bouton:hover:not(:disabled) { transform: none; box-shadow: none; }
+body.page-accueil .bouton-principal { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+body.page-accueil .bouton-principal:hover:not(:disabled) { background: var(--accent-hover); }
+body.page-accueil .bouton-secondaire { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+body.page-accueil .bouton-secondaire:hover:not(:disabled) { background: #eef2f6; }
+
+body.page-accueil .hero-panel { padding: 1rem; gap: 0.75rem; }
+body.page-accueil .mini-card { background: #f4f6f8; border: 1px solid var(--line-soft); border-radius: 8px; padding: 1rem; }
+body.page-accueil .mini-label { color: var(--ink-soft); font-size: 0.72rem; letter-spacing: 0.06em; }
+body.page-accueil .mini-card strong { color: var(--accent); font-size: 1.7rem; }
+
+body.page-accueil .avantages { gap: 1rem; }
+body.page-accueil .avantage { padding: 1.4rem; border-top: 3px solid var(--accent); }
+body.page-accueil .avantage h3 { color: var(--ink); font-size: 1.05rem; }
+body.page-accueil .avantage p { color: var(--ink-soft); font-size: 0.95rem; }
+
+body.page-accueil footer { background: var(--accent); }
+body.page-accueil footer p { color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; letter-spacing: 0; }
+
+@media (max-width: 560px) {
+  body.page-accueil .hero-copy { padding: 1.3rem; }
+  body.page-accueil .cta-group .bouton { width: 100%; text-align: center; }
+}
+/* ---- Accueil : textes courts des cartes + section vérification ---- */
+body.page-accueil .mini-card strong { font-size: 1.1rem; line-height: 1.3; }
+
+body.page-accueil .verification {
+  margin-top: 1.5rem;
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+}
+body.page-accueil .verification h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+  color: #1b2a3a;
+  letter-spacing: -0.01em;
+}
+body.page-accueil .verification-intro {
+  margin: 0 0 1.5rem;
+  color: #52606f;
+  max-width: 65ch;
+}
+body.page-accueil .etapes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+body.page-accueil .etapes li { display: flex; gap: 0.9rem; align-items: flex-start; }
+body.page-accueil .etape-num {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1f3a5f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+body.page-accueil .etapes h3 { margin: 0 0 0.25rem; font-size: 1rem; color: #1b2a3a; }
+body.page-accueil .etapes p { margin: 0; font-size: 0.93rem; color: #52606f; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  body.page-accueil .etapes { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  body.page-accueil .verification { padding: 1.3rem; }
+}
