@@ -1203,3 +1203,368 @@ dialog::backdrop { background: rgba(27, 42, 58, 0.45); backdrop-filter: none; }
 .alertes h2 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; }
 .alertes-liste { margin: 0; padding-left: 1.1rem; font-size: 0.93rem; line-height: 1.6; }
 
+/* ============================================================
+   TABLEAU DE BORD : menu latéral + cartes (selon la maquette)
+   ============================================================ */
+
+body.page-dashboard {
+  --bleu: #1a5fa0;
+  --marine: #12304f;
+  --vert: #1a8060;
+  --ambre: #b06a00;
+  --rouge: #b3261e;
+  --menu: #15304f;
+  background: #f1f5fa;
+  color: #1b2a3a;
+}
+
+/* ---- En-tête blanc avec filet bleu ---- */
+body.page-dashboard .entete {
+  background: #fff;
+  color: var(--marine);
+  box-shadow: none;
+  border-bottom: 3px solid var(--bleu);
+  padding: 1rem 0;
+}
+.entete-large { width: 100%; padding: 0 2rem; }
+body.page-dashboard .entete h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--marine);
+}
+body.page-dashboard .utilisateur-info { color: #52606f; }
+body.page-dashboard .bouton-deconnexion {
+  background: var(--bleu);
+  color: #fff;
+  border: 1px solid var(--bleu);
+  border-radius: 8px;
+}
+body.page-dashboard .bouton-deconnexion:hover:not(:disabled) { background: #14508a; }
+
+/* ---- Menu latéral + contenu ---- */
+.app-corps { display: flex; flex: 1; min-width: 0; }
+
+.menu-lateral {
+  width: 230px;
+  flex: none;
+  background: var(--menu, #15304f);
+  padding: 1.4rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.menu-titre {
+  margin: 0 0 0.6rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #9db2cc;
+}
+.menu-lien {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  color: #e6eef8;
+  text-decoration: none;
+  font-weight: 500;
+}
+.menu-lien:hover { background: rgba(255, 255, 255, 0.08); }
+.menu-lien.actif { background: #2b6cb0; color: #fff; }
+.menu-icone { width: 1.2rem; text-align: center; opacity: 0.85; }
+
+.contenu { flex: 1; min-width: 0; padding: 1.6rem 2rem 1rem; }
+.titre-page h2 { margin: 0; font-size: 1.7rem; color: #12304f; letter-spacing: -0.01em; }
+.titre-page p { margin: 0.3rem 0 1.4rem; color: #5c6b7a; }
+
+/* ---- Cartes de statistiques ---- */
+body.page-dashboard .bilan {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.2rem;
+}
+body.page-dashboard .bilan-item {
+  position: relative;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  padding: 1rem 1rem 1rem 1.8rem;
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  box-shadow: none;
+}
+body.page-dashboard .bilan-item::before {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 46px;
+  border-radius: 6px;
+  background: var(--c);
+}
+body.page-dashboard .bilan-item:nth-child(1) { --c: var(--marine); }
+body.page-dashboard .bilan-item:nth-child(2) { --c: var(--bleu); }
+body.page-dashboard .bilan-item:nth-child(3) { --c: var(--vert); }
+body.page-dashboard .bilan-item:nth-child(4) { --c: var(--ambre); }
+body.page-dashboard .bilan-item:nth-child(5) { --c: var(--rouge); }
+body.page-dashboard .bilan-valeur { color: var(--c); font-size: 1.9rem; font-weight: 800; }
+body.page-dashboard .bilan-nom {
+  color: #5c6b7a;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ---- Carte contenant la liste ---- */
+.carte-liste {
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  padding: 1.4rem;
+  margin-top: 1rem;
+}
+.carte-liste > h2 { margin: 0 0 1rem; font-size: 1.15rem; color: #12304f; }
+body.page-dashboard .carte-liste .barre-outils {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0 0 1.1rem;
+}
+body.page-dashboard .carte-liste input[type="search"] { background: #f5f8fc; border-color: #d3dde9; }
+body.page-dashboard .carte-liste .pagination { margin: 1rem 0 0; }
+
+body.page-dashboard .bouton-principal { background: var(--bleu); border-color: var(--bleu); }
+body.page-dashboard .bouton-principal:hover:not(:disabled) { background: #14508a; }
+
+/* ---- Tableau ---- */
+body.page-dashboard .tableau-conteneur { border: 1px solid #e6ecf4; border-radius: 10px; }
+body.page-dashboard .tableau thead th {
+  background: #eaf0f8;
+  color: #12304f;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.page-dashboard .tableau td { border-top: 1px solid #e6ecf4; }
+
+/* Statut en texte coloré */
+body.page-dashboard .badge {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+body.page-dashboard .badge.encours   { color: var(--bleu);  background: transparent; }
+body.page-dashboard .badge.termine   { color: var(--vert);  background: transparent; }
+body.page-dashboard .badge.avenir    { color: var(--ambre); background: transparent; }
+body.page-dashboard .badge.nondefini { color: var(--rouge); background: transparent; }
+
+body.page-dashboard .frise > span { background: var(--bleu); }
+body.page-dashboard .frise.termine > span   { background: var(--vert); }
+body.page-dashboard .frise.avenir > span    { background: var(--ambre); }
+body.page-dashboard .frise.nondefini > span { background: #c9d3de; }
+
+/* Boutons d'action en petites icônes */
+body.page-dashboard .bouton-icone {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1rem;
+  border: 0;
+  border-radius: 8px;
+}
+body.page-dashboard .bouton-modifier { background: #e3eefb; color: var(--bleu); }
+body.page-dashboard .bouton-modifier:hover:not(:disabled) { background: #d0e2f8; }
+body.page-dashboard .bouton-supprimer { background: #fde8e8; color: var(--rouge); }
+body.page-dashboard .bouton-supprimer:hover:not(:disabled) { background: #fad0d0; }
+
+/* ---- Fenêtres et pied de page ---- */
+body.page-dashboard dialog h2 { background: var(--marine); }
+body.page-dashboard footer { background: #fff; border-top: 1px solid #dbe4ef; margin-top: 0; }
+body.page-dashboard footer p { color: #5c6b7a; }
+
+/* ---- Tablette et téléphone ---- */
+@media (max-width: 900px) {
+  .entete-large { padding: 0 1rem; }
+  .app-corps { flex-direction: column; }
+  .menu-lateral {
+    width: auto;
+    flex-direction: row;
+    gap: 0.4rem;
+    padding: 0.6rem 0.8rem;
+    overflow-x: auto;
+  }
+  .menu-titre { display: none; }
+  .menu-lien { white-space: nowrap; padding: 0.55rem 0.8rem; }
+  .contenu { padding: 1.2rem 1rem 0.5rem; }
+}
+@media (max-width: 560px) {
+  body.page-dashboard .bilan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .carte-liste { padding: 1rem; }
+}
+/* ============================================================
+   ACCUEIL + CONNEXION : même style que le tableau de bord
+   Bleu #1a5fa0 | marine #12304f | menu #15304f | fond #f1f5fa
+   ============================================================ */
+
+body.page-accueil,
+body.page-auth {
+  --bleu: #1a5fa0;
+  --marine: #12304f;
+  --vert: #1a8060;
+  --ambre: #b06a00;
+  --rouge: #b3261e;
+  --bord: #dbe4ef;
+  background: #f1f5fa;
+  color: #1b2a3a;
+}
+
+/* ---------- ACCUEIL : en-tête blanc avec filet bleu ---------- */
+body.page-accueil .entete,
+body.page-accueil .entete-accueil {
+  background: #fff;
+  color: var(--marine);
+  box-shadow: none;
+  border-bottom: 3px solid var(--bleu);
+  padding: 1rem 0;
+}
+body.page-accueil .entete h1 {
+  margin: 0;
+  font-size: clamp(1.05rem, 4.2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--marine);
+}
+body.page-accueil .entete .sous-titre { margin-top: 0.15rem; color: #5c6b7a; font-size: 0.9rem; }
+body.page-accueil .entete-main { flex-direction: row; align-items: center; }
+body.page-accueil .entete-main .bouton { width: auto; flex: none; }
+
+/* ---------- ACCUEIL : boutons ---------- */
+body.page-accueil .bouton-principal,
+body.page-auth .bouton-principal {
+  background: var(--bleu);
+  border-color: var(--bleu);
+  color: #fff;
+  border-radius: 8px;
+}
+body.page-accueil .bouton-principal:hover:not(:disabled),
+body.page-auth .bouton-principal:hover:not(:disabled) { background: #14508a; }
+
+/* ---------- ACCUEIL : carte principale ---------- */
+body.page-accueil .accueil-main { padding: 2rem 0 1.5rem; }
+body.page-accueil .hero-copy,
+body.page-accueil .avantage,
+body.page-accueil .verification {
+  background: #fff;
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  box-shadow: none;
+}
+body.page-accueil .tag {
+  background: #e3eefb;
+  color: var(--bleu);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-weight: 600;
+}
+body.page-accueil .hero-copy h2 { color: var(--marine); }
+
+/* ---------- ACCUEIL : cartes à barre colorée (comme les compteurs) ---------- */
+body.page-accueil .hero-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  gap: 1rem;
+}
+body.page-accueil .mini-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  padding: 1rem 1rem 1rem 1.8rem;
+  justify-content: center;
+}
+body.page-accueil .mini-card::before {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 42px;
+  border-radius: 6px;
+  background: var(--c);
+}
+body.page-accueil .mini-card:nth-child(1) { --c: var(--bleu); }
+body.page-accueil .mini-card:nth-child(2) { --c: var(--vert); }
+body.page-accueil .mini-card:nth-child(3) { --c: var(--ambre); }
+body.page-accueil .mini-card:nth-child(4) { --c: var(--marine); }
+body.page-accueil .mini-label { color: #5c6b7a; font-size: 0.8rem; font-weight: 500; letter-spacing: 0; text-transform: none; }
+body.page-accueil .mini-card strong { color: var(--c); font-size: 1.3rem; font-weight: 800; }
+
+/* ---------- ACCUEIL : avantages ---------- */
+body.page-accueil .avantage { border-top: 1px solid var(--bord); position: relative; padding-top: 1.6rem; }
+body.page-accueil .avantage::before {
+  content: "";
+  position: absolute;
+  left: 1.4rem;
+  top: 0;
+  width: 42px;
+  height: 5px;
+  border-radius: 0 0 5px 5px;
+  background: var(--c);
+}
+body.page-accueil .avantage:nth-child(1) { --c: var(--bleu); }
+body.page-accueil .avantage:nth-child(2) { --c: var(--vert); }
+body.page-accueil .avantage:nth-child(3) { --c: var(--ambre); }
+body.page-accueil .avantage h3 { color: var(--marine); }
+
+/* ---------- ACCUEIL : section attestations ---------- */
+body.page-accueil .verification h2 { color: var(--marine); }
+body.page-accueil .etape-num { background: var(--bleu); }
+
+/* ---------- Pied de page (accueil) ---------- */
+body.page-accueil footer { background: #fff; border-top: 1px solid var(--bord); margin-top: 1rem; }
+body.page-accueil footer p { color: #5c6b7a; }
+
+/* ---------- CONNEXION ---------- */
+body.page-auth .auth-shell {
+  background: #fff;
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(18, 48, 79, 0.08);
+}
+body.page-auth .auth-illustration {
+  background: #15304f;
+  border-right: 4px solid var(--bleu);
+}
+body.page-auth .auth-illustration .eyebrow { color: #9db2cc; opacity: 1; }
+body.page-auth .auth-card h2 { color: var(--marine); }
+body.page-auth .champ-auth label { color: var(--marine); }
+body.page-auth input { background: #f5f8fc; border-color: #d3dde9; }
+body.page-auth input:focus-visible { outline: 3px solid rgba(26, 95, 160, 0.2); border-color: var(--bleu); }
+body.page-auth .auth-message { color: var(--vert); }
+body.page-auth .auth-message.error { color: var(--rouge); }
+
+@media (max-width: 900px) {
+  body.page-auth .auth-illustration { border-right: 0; border-bottom: 4px solid var(--bleu); }
+}
+@media (max-width: 560px) {
+  body.page-accueil .entete-main .bouton { padding: 0.6rem 0.9rem; }
+  body.page-accueil .entete .sous-titre { display: none; }
+}

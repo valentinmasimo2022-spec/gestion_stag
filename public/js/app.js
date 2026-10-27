@@ -190,13 +190,15 @@ function ligne(s) {
     const actions = el('div', 'actions-ligne');
     const nomComplet = [s.nom, s.prenom].join(' ');
 
-    const bModifier = el('button', 'bouton bouton-lien', 'Modifier');
+    const bModifier = el('button', 'bouton bouton-lien bouton-icone bouton-modifier', '✎');
     bModifier.type = 'button';
+    bModifier.title = 'Modifier';
     bModifier.setAttribute('aria-label', 'Modifier le dossier de ' + nomComplet);
     bModifier.addEventListener('click', () => ouvrirFormulaire(s));
 
-    const bSupprimer = el('button', 'bouton bouton-lien', 'Supprimer');
+    const bSupprimer = el('button', 'bouton bouton-lien bouton-icone bouton-supprimer', '✕');
     bSupprimer.type = 'button';
+    bSupprimer.title = 'Supprimer';
     bSupprimer.setAttribute('aria-label', 'Supprimer le dossier de ' + nomComplet);
     bSupprimer.addEventListener('click', () => demanderSuppression(s));
 

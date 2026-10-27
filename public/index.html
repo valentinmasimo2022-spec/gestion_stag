@@ -6,15 +6,11 @@
   <title>Tableau de bord | Gestion des stagiaires</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="page-dashboard">
   <header class="entete">
-    <div class="conteneur entete-contenu">
+    <div class="entete-contenu entete-large">
       <div class="entete-main">
-        <div>
-          <span class="eyebrow">Tableau de bord</span>
-          <h1>Gestion des stagiaires</h1>
-          <p class="sous-titre">Dossiers et périodes de stage du centre de formation</p>
-        </div>
+        <h1>Gestion des stagiaires</h1>
         <div class="entete-compte">
           <p class="utilisateur-info" id="info-utilisateur"></p>
           <button type="button" class="bouton bouton-deconnexion" id="btn-deconnexion">Déconnexion</button>
@@ -23,50 +19,68 @@
     </div>
   </header>
 
-  <main class="conteneur">
-    <section class="bilan" aria-label="Répartition des dossiers par statut">
-      <div class="bilan-item"><span class="bilan-valeur" id="st-total">–</span><span class="bilan-nom">Dossiers</span></div>
-      <div class="bilan-item"><span class="bilan-valeur" id="st-avenir">–</span><span class="bilan-nom">À venir</span></div>
-      <div class="bilan-item"><span class="bilan-valeur" id="st-encours">–</span><span class="bilan-nom">En cours</span></div>
-      <div class="bilan-item"><span class="bilan-valeur" id="st-termine">–</span><span class="bilan-nom">Terminés</span></div>
-      <div class="bilan-item"><span class="bilan-valeur" id="st-nondefini">–</span><span class="bilan-nom">Non définis</span></div>
-    </section>
-
-    <section class="alertes" id="alertes-fin" aria-live="polite" hidden></section>
-
-    <section class="barre-outils">
-      <label class="recherche">
-        <span class="visuel-cache">Rechercher un stagiaire</span>
-        <input type="search" id="recherche" placeholder="Rechercher par numéro, nom ou prénom" autocomplete="off">
-      </label>
-      <button type="button" class="bouton" id="btn-exporter">Exporter (Excel)</button>
-      <button type="button" class="bouton bouton-principal" id="btn-ajouter">Ajouter un stagiaire</button>
-    </section>
-
-    <div class="tableau-conteneur">
-      <table class="tableau">
-        <caption class="visuel-cache">Liste des stagiaires</caption>
-        <thead>
-          <tr>
-            <th scope="col">N°</th>
-            <th scope="col">Stagiaire</th>
-            <th scope="col">Formation</th>
-            <th scope="col">Période de stage</th>
-            <th scope="col">Statut</th>
-            <th scope="col"><span class="visuel-cache">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody id="corps-tableau"></tbody>
-      </table>
-      <p class="message-vide" id="message-vide" hidden></p>
-    </div>
-
-    <nav class="pagination" aria-label="Pagination">
-      <button type="button" class="bouton" id="btn-precedent">Précédent</button>
-      <span id="info-page" aria-live="polite"></span>
-      <button type="button" class="bouton" id="btn-suivant">Suivant</button>
+  <div class="app-corps">
+    <nav class="menu-lateral" aria-label="Menu principal">
+      <p class="menu-titre">MENU PRINCIPAL</p>
+      <a class="menu-lien actif" href="#haut" aria-current="page"><span class="menu-icone" aria-hidden="true">▦</span> Tableau de bord</a>
+      <a class="menu-lien" href="#liste"><span class="menu-icone" aria-hidden="true">☰</span> Stagiaires</a>
+      <a class="menu-lien" href="/"><span class="menu-icone" aria-hidden="true">⌂</span> Accueil</a>
     </nav>
-  </main>
+
+    <main class="contenu" id="haut">
+      <div class="titre-page">
+        <h2>Tableau de bord</h2>
+        <p>Suivi administratif des stagiaires du centre</p>
+      </div>
+
+      <section class="bilan" aria-label="Répartition des dossiers par statut">
+        <div class="bilan-item"><span class="bilan-valeur" id="st-total">–</span><span class="bilan-nom">Dossiers</span></div>
+        <div class="bilan-item"><span class="bilan-valeur" id="st-encours">–</span><span class="bilan-nom">Stages en cours</span></div>
+        <div class="bilan-item"><span class="bilan-valeur" id="st-termine">–</span><span class="bilan-nom">Stages terminés</span></div>
+        <div class="bilan-item"><span class="bilan-valeur" id="st-avenir">–</span><span class="bilan-nom">Stages à venir</span></div>
+        <div class="bilan-item"><span class="bilan-valeur" id="st-nondefini">–</span><span class="bilan-nom">Non définis</span></div>
+      </section>
+
+      <section class="alertes" id="alertes-fin" aria-live="polite" hidden></section>
+
+      <section class="carte-liste" id="liste">
+        <h2>Liste des stagiaires</h2>
+
+        <div class="barre-outils">
+          <label class="recherche">
+            <span class="visuel-cache">Rechercher un stagiaire</span>
+            <input type="search" id="recherche" placeholder="Rechercher par numéro, nom ou prénom" autocomplete="off">
+          </label>
+          <button type="button" class="bouton" id="btn-exporter">Exporter (Excel)</button>
+          <button type="button" class="bouton bouton-principal" id="btn-ajouter">+ Nouveau</button>
+        </div>
+
+        <div class="tableau-conteneur">
+          <table class="tableau">
+            <caption class="visuel-cache">Liste des stagiaires</caption>
+            <thead>
+              <tr>
+                <th scope="col">N°</th>
+                <th scope="col">Stagiaire</th>
+                <th scope="col">Formation</th>
+                <th scope="col">Période de stage</th>
+                <th scope="col">Statut</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="corps-tableau"></tbody>
+          </table>
+          <p class="message-vide" id="message-vide" hidden></p>
+        </div>
+
+        <nav class="pagination" aria-label="Pagination">
+          <button type="button" class="bouton" id="btn-precedent">Précédent</button>
+          <span id="info-page" aria-live="polite"></span>
+          <button type="button" class="bouton" id="btn-suivant">Suivant</button>
+        </nav>
+      </section>
+    </main>
+  </div>
 
   <!-- Formulaire d'ajout / de modification -->
   <dialog id="dlg-formulaire" aria-labelledby="titre-formulaire">
